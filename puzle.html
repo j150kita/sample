@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>スライドパズル</title>
+    <style>
+        body {
+            background-color: #CCCCFF;
+            text-align: center;
+        }
+
+        .box1 {
+            padding: 0.5em 1em;
+            margin: 2em 0;
+            color: #FFF;
+            background: #FF99FF;
+            border-bottom: solid 6px #FF66FF;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+            border-radius: 9px;
+        }
+
+        .box1 p {
+            margin: 0;
+            padding: 0;
+        }
+
+        .box2 {
+            padding: 0.5em 1em;
+            margin: 2em 0;
+            border: double 5px #FF66FF;
+        }
+
+        .box2 p {
+            margin: 0;
+            padding: 0;
+        }
+
+        table.rules,
+        table.rules th,
+        table.rules td {
+            border: none;
+        }
+
+        table.rules {
+            width: 60%;
+            text-align: left;
+            margin: 0 auto;
+        }
+
+        table.rules th,
+        table.rules td {
+            padding: 5px;
+        }
+    </style>
+    <script type="text/javascript">
+        var ims = document.getElementsByName("im");
+        var aki = 8; //最初の空き位置 マスの位置は 0,1,2,3 と割り振る
+        var a1 = new Array(4); //スライドしたときの効果音を入れる配列
+        var a2 = new Audio("finish.mp3"); //完成時の音楽
+        var a1_cnt = 0; //次に効果音を鳴らす配列要素の値
+        var bgm = new Audio("Look_at_Me.mp3"); // ゲーム中のBGM
+        bgm.loop = true; // BGMをループ再生
+
+        for (i = 0; i < 4; i++) {
+            a1[i] = new Audio("push.mp3"); //多重再生のため 4 個のオブジェクトを作成
+        }
+
+        var puzzlePatterns = [
+            ["test7.jpg", "test6.jpg", "test4.jpg", "test3.jpg", "test1.jpg", "test5.jpg", "test2.jpg", "test0.jpg", "black.png"],
+            ["test2.jpg", "test7.jpg", "test1.jpg", "test3.jpg", "test6.jpg", "test4.jpg", "test0.jpg", "test5.jpg", "black.png"],
+            ["test5.jpg", "test3.jpg", "test4.jpg", "test1.jpg", "test6.jpg", "test7.jpg", "test0.jpg", "test2.jpg", "black.png"],
+            ["test0.jpg", "test2.jpg", "test5.jpg", "test3.jpg", "test4.jpg", "test6.jpg", "test7.jpg", "test1.jpg", "black.png"],
+            ["test2.jpg", "test3.jpg", "test4.jpg", "test1.jpg", "test6.jpg", "test5.jpg", "test0.jpg", "test7.jpg", "black.png"],
+            ["test1.jpg", "test6.jpg", "test0.jpg", "test2.jpg", "test4.jpg", "test7.jpg", "test5.jpg", "test3.jpg", "black.png"],
+            ["test2.jpg", "test4.jpg", "test5.jpg", "test1.jpg", "test3.jpg", "test7.jpg", "test0.jpg", "test6.jpg", "black.png"],
+            ["test2.jpg", "test0.jpg", "test4.jpg", "test7.jpg", "test5.jpg", "test6.jpg", "test1.jpg", "test3.jpg", "black.png"],
+            ["test2.jpg", "test1.jpg", "test5.jpg", "test0.jpg", "test4.jpg", "test3.jpg", "test7.jpg", "test6.jpg", "black.png"],
+            ["test2.jpg", "test6.jpg", "test5.jpg", "test7.jpg", "test3.jpg", "test1.jpg", "test0.jpg", "test4.jpg", "black.png"],
+            // 他のパターンを追加する
+        ];
+
+        var gameStarted = false;
+        var moveCount = 0;
+        var startTime;
+        var timer;
+
+        // ゲーム開始ボタンを押したときに呼び出される関数
+        function startGame() {
+
+            var randomIndex = Math.floor(Math.random() * puzzlePatterns.length);
+            initializePuzzle(puzzlePatterns[randomIndex]);
+            moveCount = 0;
+            document.getElementById("moveCount").innerHTML = '移動回数: 0'; // 移動 回数を表示
+            document.getElementById("moveCount").style.display = 'inline'; // 移動回数表示を有効にする
+            gameStarted = true;
+            aki = 8;
+            document.getElementById("msg").innerHTML = '';
+            document.getElementById("completionTime").innerHTML = '完成時間: ';
+            startTime = new Date(); // ゲーム開始時刻を記録
+            timer = setInterval(updateTimer, 1000); // 1秒ごとにタイマー更新
+            document.addEventListener('keydown', handleKeyPress);
+            bgm.play(); // BGMを再生
+        }
+
+        // スライドパズルの初期化関数
+        function initializePuzzle(pattern) {
+            // 指定されたパターンでパズルを初期化
+            for (var i = 0; i < ims.length; i++) {
+                ims[i].src = pattern[i];
+            }
+        }
+
+        // タイマーを更新する関数
+        function updateTimer() {
+            if (!gameStarted) return;
+            var currentTime = new Date();
+            var elapsedTime = Math.floor((currentTime - startTime) / 1000);
+            document.getElementById("timeElapsed").innerHTML = '経過時間: ' + elapsedTime + '秒';
+        }
+
+        function handleKeyPress(event) {
+            var keyPressed = event.key;
+            var moveDirection;
+            // キーボードの矢印キーに応じて移動する方向を設定
+            switch (keyPressed) {
+                case "ArrowUp":
+                    moveDirection = -3;
+                    break;
+                case "ArrowDown":
+                    moveDirection = 3;
+                    break;
+                case "ArrowLeft":
+                    moveDirection = -1;
+                    break;
+                case "ArrowRight":
+                    moveDirection = 1;
+                    break;
+                default:
+                    return;
+            }
+            var newPosition = aki + moveDirection;
+            if (newPosition >= 0 && newPosition < ims.length) {
+                c(newPosition);
+            }
+        }
+
+        function c(p) {
+            if (!gameStarted) return;
+            if (p == 0) {
+                if (aki != 1 && aki != 3) return;
+            } else if (p == 1) {
+                if (aki != 0 && aki != 2 && aki != 4) return;
+            }
+            else if (p == 2) {
+                if (aki != 1 && aki != 5) return;
+            }
+            else if (p == 3) {
+                if (aki != 0 && aki != 4 && aki != 6) return;
+            }
+            else if (p == 4) {
+                if (aki != 1 && aki != 3 && aki != 5 && aki != 7) return;
+            }
+            else if (p == 5) {
+                if (aki != 2 && aki != 4 && aki != 8) return;
+            }
+            else if (p == 6) {
+                if (aki != 3 && aki != 7) return;
+            }
+            else if (p == 7) {
+                if (aki != 4 && aki != 6 && aki != 8) return;
+            }
+            else if (p == 8) {
+                if (aki != 5 && aki != 7) return;
+            }
+            a1[a1_cnt++].play(); //スライドしたときの効果音を再生
+            a1_cnt &= 3; // a1_cnt が 0～3 の範囲になるように 4 になったら 0 に戻す
+            ims[aki].src = ims[p].src;
+            ims[aki = p].src = "black.png";
+            moveCount++;
+            document.getElementById("moveCount").innerHTML = '移動回数: ' + moveCount;
+            checkForCompletion();
+        }
+
+        function checkForCompletion() {
+            if (ims[0].src.endsWith("test0.jpg") && ims[1].src.endsWith("test1.jpg") &&
+                ims[2].src.endsWith("test2.jpg") && ims[3].src.endsWith("test3.jpg") && ims[4].src.endsWith("test4.jpg") && ims[5].src.endsWith("test5.jpg") && ims[6].src.endsWith("test6.jpg") && ims[7].src.endsWith("test7.jpg")) { //こちらに変えます
+                ims[8].src = "test8.jpg"; //最後の 1 枚を表示
+                a2.play(); //完成時の音楽を再生
+                document.getElementById("msg").innerHTML = '<font color="red">完成です</font>';
+                clearInterval(timer); // タイマー停止
+                bgm.pause(); // BGMを停止
+                bgm.currentTime = 0; // BGMを先頭に戻す
+                gameStarted = false; // ゲームを終了状態に戻す
+                var endTime = new Date(); // ゲーム終了時刻を取得
+                var completionTime = Math.floor((endTime - startTime) / 1000); // 完了時間を計算（秒）
+                document.getElementById("completionTime").innerHTML = '完成時間: ' + completionTime + '秒'; // 完了時間を表示
+            }
+        }
+
+    </script>
+</head>
+
+<body>
+    <br>
+    <br>
+    <div class="box1">
+        <h1>スライドパズル</h1>
+    </div>
+    <br>
+    <br>
+    <div class="box2">
+        <h2>
+            <マニュアル>
+        </h2>
+        <table class="rules">
+            <tr>
+                <td>・「ゲーム開始」を押すとゲームがスタートする。</td>
+            </tr>
+            <tr>
+                <td>・動かせるピースをクリックするとピースを動かすことができます。</td>
+            </tr>
+            <tr>
+                <td>・矢印キーを使うと黒いピースを動かしてほかのピースを動かすこともできます。</td>
+            </tr>
+            <tr>
+                <td>・プレイ中は移動回数と経過時間が表示され、完成すると完成にかかった時間も表示される。</td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <br>
+    <div style="line-height:0">
+        <img name="im" onClick="c(0)" src="test0.jpg"><img name="im" onClick="c(1)" src="test1.jpg"><img name="im"
+            onClick="c(2)" src="test2.jpg"><br>
+        <img name="im" onClick="c(3)" src="test3.jpg"><img name="im" onClick="c(4)" src="test4.jpg"><img name="im"
+            onClick="c(5)" src="test5.jpg"><br>
+        <img name="im" onClick="c(6)" src="test6.jpg"><img name="im" onClick="c(7)" src="test7.jpg"><img name="im"
+            onClick="c(8)" src="black.png">
+    </div>
+    <button onclick="startGame()">ゲーム開始</button>
+    <br>
+    <span id="msg">ピースを移動させて完成させてみよう</span>
+    <br>
+    <span id="moveCount" style="display: none;">移動回数: 0</span>
+    <br>
+    <span id="timeElapsed">経過時間: 0秒</span>
+    <br>
+    <span id="completionTime">完成時間: </span>
+</body>
+
+</html>
